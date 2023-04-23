@@ -1,4 +1,4 @@
-name: flutter_weather
+name: flutter_chat_app
 description: A new Flutter project.
 version: 1.0.0+1
 
@@ -8,10 +8,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  get: ^4.6.5
-  http: ^0.13.5
   cupertino_icons: ^1.0.2
+  get: ^4.6.5
+  get_storage: ^2.1.1
   provider: ^6.0.5
+#  sqflite: ^2.2.6
+#  http: ^0.13.5
+#  intl: ^0.17.0
+  google_fonts: ^4.0.3
+  firebase_core: ^2.10.0
+  firebase_auth: ^4.4.2
+  modal_progress_hud_nsn: ^0.3.0
+  cloud_firestore: ^4.5.2
 
 dev_dependencies:
   flutter_test:
