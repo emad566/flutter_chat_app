@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_app/models/MsgModel.dart';
+import 'package:flutter_chat_app/screens/login/login_screen.dart';
 import 'package:flutter_chat_app/shared/constants.dart';
 import 'package:flutter_chat_app/widgets/components.dart';
 import 'package:flutter_chat_app/widgets/custom_text_field.dart';
 import 'package:flutter_chat_app/widgets/theme_colors.dart';
+import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -18,19 +21,17 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _inputController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
   FirebaseFirestore db = FirebaseFirestore.instance;
 
   List<Map<String, dynamic>> chatTexts = [];
-  List<MsgModel> messages = [];
 
   final GetStorage _box = GetStorage();
   late String loggedInUserId;
 
-  dynamic docs;
-
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     loggedInUserId = _box.read(Caches.cacheUserId);
   }
@@ -43,13 +44,31 @@ class _ChatScreenState extends State<ChatScreen> {
         setState: setState,
         context: context,
         actionRow: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Image.asset(logoPath, width: 50, height: 50,),
-            Text(
-              'Chat',
-              style: GoogleFonts.lato(
-                fontSize: 26,
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(logoPath, width: 50, height: 50,),
+                  Text(
+                    'Chat',
+                    style: GoogleFonts.lato(
+                      fontSize: 26,
+                      color: whiteClr,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: () async{
+                await FirebaseAuth.instance.signOut();
+                Get.offAll(()=>const LoginScreen(),);
+              },
+              icon: const Icon(
+                Icons.logout,
+                size: 30,
                 color: whiteClr,
               ),
             ),
@@ -62,10 +81,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Container(
               width: double.infinity,
               color: ThemeColors.chatBg,
-              // child: buildFutureChatMsgItm(),
-              child: SingleChildScrollView(
-                child: buildFutureChatMsgItems(),
-              ),
+              child: buildFutureChatMsgItems()
             ),
           ),
 
@@ -77,19 +93,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
   StreamBuilder<QuerySnapshot<Object?>> buildFutureChatMsgItems() {
     return StreamBuilder<QuerySnapshot>(
-      stream: db.collection('messages').orderBy('created_at').snapshots(),
-      // builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-      builder: (context, snapshot) {
+      stream: db.collection('messages').orderBy('created_at', descending: true).snapshots(),
+      builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (snapshot.hasError) {
           return const Text('Something went wrong');
         }
         
         if (snapshot.data != null) {
-          loadMessages(snapshot.data!.docs);
-          return Column(
-            children: [
-              ...messages.map((MsgModel msg) => chatMsgItem(item: msg)).toList()
-            ],
+          return ListView.builder(
+            controller: _scrollController,
+            reverse: true,
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (BuildContext context, int index) {
+              Map<String, dynamic> item = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+              MsgModel itemModel = MsgModel.fromJson(item);
+              return chatMsgItem(item: itemModel);
+            },
           );
         }
 
@@ -135,18 +154,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
     db.collection("messages").add(message).then((DocumentReference doc) async{
       _inputController.text= '';
+      _scrollController.animateTo(0, duration: const Duration(milliseconds: 1000), curve: Curves.fastOutSlowIn);
       if (kDebugMode) {
         print('messages id: ${doc.id}');
       }
     });
   }
 
-  loadMessages(List<QueryDocumentSnapshot<Object?>> messagesList){
-    messages = [];
-    for (var item in messagesList) {
-      messages.add(MsgModel.fromJson(item.data() as Map<String, dynamic>));
-    }
-  }
 
   Widget chatMsgItem({
     required MsgModel item

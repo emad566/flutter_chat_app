@@ -8,7 +8,7 @@ class CustomTextField extends StatelessWidget {
   final String hintText;
   final TextEditingController controller;
   final bool obscureText;
-  final String? validator;
+  final Function? validator;
   final Widget? suffixIcon;
   final Color? borderColor;
 
@@ -17,7 +17,7 @@ class CustomTextField extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10.0),
       child: TextFormField(
-        validator: (val){ return validator;},
+        validator: (val){ return validator != null? validator!() : null;},
         controller: controller,
         style: TextStyle(color: borderColor?? whiteClr,),
         obscureText: obscureText,

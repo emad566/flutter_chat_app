@@ -66,7 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   CustomTextField(
                     hintText: 'Email',
                     controller: _emailController,
-                    validator: _emailController.text == ''? 'Email is required' : null,
+                    validator: (){return _emailController.text == ''? 'Email is required' : null;},
                     suffixIcon: Icon(
                       !isVisiblePassword? Icons.visibility : Icons.visibility_off,
                       size: 30,
@@ -78,7 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     obscureText: isVisiblePassword? false : true,
                     hintText: 'Password',
                     controller: _passwordController,
-                    validator: _passwordController.text == ''? 'Password is required' : null,
+                    validator: (){return _passwordController.text == ''? 'Password is required' : null; },
                     suffixIcon: IconButton(
                       icon: Icon(
                         !isVisiblePassword? Icons.visibility : Icons.visibility_off,
@@ -122,9 +122,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       isAsyncState =true;
     });
     try {
-      await registerFirebase();
-      // ignore: use_build_context_synchronously
-      showSnackBar(text: 'Success', state: SnackBarState.success, context: context);
+      bool isLoggedIn = await registerFirebase();
+      if(isLoggedIn){
+        // ignore: use_build_context_synchronously
+        showSnackBar(text: 'Success', state: SnackBarState.success, context: context);
+      }else{
+        // ignore: use_build_context_synchronously
+        showSnackBar(text: 'Error try again!', state: SnackBarState.fail, context: context);
+      }
     } on FirebaseAuthException catch (e) {
       showSnackBar(text: e.code, state: SnackBarState.fail, context: context);
     } catch (e) {
@@ -135,7 +140,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
   }
 
-  Future<void> registerFirebase() async {
+  Future<bool> registerFirebase() async {
     if(formKey.currentState!.validate()){
       var auth = FirebaseAuth.instance;
       UserCredential user = await auth.createUserWithEmailAndPassword(
@@ -143,12 +148,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text,
       );
 
-      if(user.user == null) return ;
+      if(user.user == null) return false;
       final GetStorage box = GetStorage();
       box.write(Caches.cacheUserId, user.user!.uid);
       Get.to(()=>const ChatScreen());
+      return true;
 
-      debugPrint(user.user!.displayName);
+    }else{
+      return false;
     }
   }
 }

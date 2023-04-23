@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   CustomTextField(
                     hintText: 'Email',
                     controller: _emailController,
-                    validator: _emailController.text == ''? 'Email is required' : null,
+                    validator: (){return _emailController.text == ''? 'Email is required' : null;},
                     suffixIcon: Icon(
                       !isVisiblePassword? Icons.visibility : Icons.visibility_off,
                       size: 30,
@@ -81,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     obscureText: isVisiblePassword? false : true,
                     hintText: 'Password',
                     controller: _passwordController,
-                    validator: _passwordController.text == ''? 'Password is required' : null,
+                    validator: (){return _passwordController.text == ''? 'Password is required' : null;},
                     suffixIcon: IconButton(
                       icon: Icon(
                         !isVisiblePassword? Icons.visibility : Icons.visibility_off,
@@ -125,9 +125,14 @@ class _LoginScreenState extends State<LoginScreen> {
       isAsyncState =true;
     });
     try {
-      await loginFirebase();
-      // ignore: use_build_context_synchronously
-      showSnackBar(text: 'Success', state: SnackBarState.success, context: context);
+      bool isLoggedIn = await loginFirebase();
+      if(isLoggedIn){
+        // ignore: use_build_context_synchronously
+        showSnackBar(text: 'Success', state: SnackBarState.success, context: context);
+      }else{
+        // ignore: use_build_context_synchronously
+        showSnackBar(text: 'Error try again!', state: SnackBarState.fail, context: context);
+      }
     } on FirebaseAuthException catch (e) {
       showSnackBar(text: e.code, state: SnackBarState.fail, context: context);
     } catch (e) {
@@ -141,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  Future<void> loginFirebase() async {
+  Future<bool> loginFirebase() async {
     if(formKey.currentState!.validate()){
       var auth = FirebaseAuth.instance;
       UserCredential credential  = await auth.signInWithEmailAndPassword(
@@ -149,16 +154,16 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
 
-      if(credential.user == null) return;
+      if(credential.user == null) return false;
 
       String userId = credential.user!.uid;
       final GetStorage box = GetStorage();
       box.write(Caches.cacheUserId, userId);
       Get.to(()=>const ChatScreen());
 
-      if (kDebugMode) {
-        print('credential.credential!.accessToken: ${credential.user?.uid}');
-      }
+      return true;
+    }else{
+      return false;
     }
   }
 }
